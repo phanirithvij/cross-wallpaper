@@ -3,14 +3,28 @@
 
 import 'dart:ffi' as ffi;
 import 'package:path/path.dart' as p;
+import 'utils.dart' show downloadFile;
+import 'dart:io';
 
-main(List args) {
+main(List args) async {
   if (args.length == 1) {
     final file = p.canonicalize(args[0]);
-    if (!setWallpaper(file)) {
+    final exists =
+        FileSystemEntity.typeSync(file) != FileSystemEntityType.notFound;
+
+    if (exists && !setWallpaper(file)) {
       print("Failed to set wallpaper");
       return -1;
     }
+    print("Not a file");
+    // url
+    final directory = await Directory.systemTemp.createTemp('my_temp_dir');
+    final path = directory.path;
+
+    downloadFile(args[0], "$path/temp.png").whenComplete(() {
+      setWallpaper(p.canonicalize("$path/temp.png"));
+      exit(0);
+    });
     return 0;
   }
   print(getWallpaper());
