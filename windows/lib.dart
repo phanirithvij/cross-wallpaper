@@ -1,15 +1,24 @@
+// A Wallpaper cli app in dart
+// Uses dart:ffi requires dart>=2.5.0
+
 import 'dart:ffi' as ffi;
 import 'package:path/path.dart' as p;
 
 main(List args) {
   if (args.length == 1) {
     final file = p.canonicalize(args[0]);
-    setWallpaper(file);
-    return;
+    if (!setWallpaper(file)) {
+      print("Failed to set wallpaper");
+      return -1;
+    }
+    return 0;
   }
-  getWallpaper();
+  print(getWallpaper());
 }
 
+/// [Utf16] Helper class to decode and encode String to Utf16 and back
+/// [ffi_examples](https://github.com/dart-lang/samples/blob/master/ffi/structs/structs.dart#L9)
+///
 class Utf16 extends ffi.Struct<Utf16> {
   @ffi.Uint16()
   int char;
@@ -25,6 +34,7 @@ class Utf16 extends ffi.Struct<Utf16> {
     return String.fromCharCodes(units);
   }
 
+  /// [Utf16] ffi.Utf16.toUtf16 is the same
   static ffi.Pointer<Utf16> toUtf16(String s) {
     final units = s.codeUnits;
     final ptr = ffi.Pointer<Utf16>.allocate(count: units.length + 1);
@@ -46,13 +56,16 @@ BOOL SystemParametersInfoW(
 );
 
 https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow
+https://github.com/sindresorhus/win-wallpaper/blob/master/wallpaper.c
+
 */
+
 typedef SystemParametersInfoWC = ffi.Int8 Function(ffi.Uint32 uiAction,
     ffi.Uint32 uiParam, ffi.Pointer pvParam, ffi.Uint32 fWinIni);
 typedef SystemParametersInfoWDart = int Function(
     int uiAction, int uiParam, ffi.Pointer pvParam, int fWinIni);
 
-int getWallpaper() {
+String getWallpaper() {
   // Load user32.dll.
   final dylib = ffi.DynamicLibrary.open('user32.dll');
 
@@ -68,11 +81,11 @@ int getWallpaper() {
   final filenameP = Utf16.toUtf16("0" * MAX_PATH);
 
   // Invoke the command, and free the pointers.
-  final result = systemParWP(SPI_GETDESKWALLPAPER, MAX_PATH, filenameP, 0);
-  print(Utf16.fromUtf16(filenameP));
-
+  systemParWP(SPI_GETDESKWALLPAPER, MAX_PATH, filenameP, 0);
+  String wall = Utf16.fromUtf16(filenameP);
   filenameP.free();
-  return result;
+
+  return wall;
 }
 
 bool setWallpaper(String filename) {
@@ -84,6 +97,7 @@ bool setWallpaper(String filename) {
       dylib.lookupFunction<SystemParametersInfoWC, SystemParametersInfoWDart>(
           'SystemParametersInfoW');
 
+  // http://pinvoke.net/default.aspx/Enums/SPIF.html
   const int SPI_SETDESKWALLPAPER = 0x0014;
   const int SPIF_UPDATEINIFILE = 0x01;
   const int SPIF_SENDCHANGE = 0x02;
@@ -94,7 +108,6 @@ bool setWallpaper(String filename) {
   // Invoke the command, and free the pointers.
   final result = systemParWP(
       SPI_SETDESKWALLPAPER, 0, filenameP, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-  print(Utf16.fromUtf16(filenameP));
 
   filenameP.free();
   return result > 0;
