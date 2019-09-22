@@ -1,8 +1,13 @@
 import 'dart:ffi' as ffi;
+import 'package:path/path.dart' as p;
 
-main() {
+main(List args) {
+  if (args.length == 1) {
+    final file = p.canonicalize(args[0]);
+    setWallpaper(file);
+    return;
+  }
   getWallpaper();
-  setWallpaper("D:\\Images\\Wallpapers\\sky-stars-j8e1zp.jpg");
 }
 
 class Utf16 extends ffi.Struct<Utf16> {
