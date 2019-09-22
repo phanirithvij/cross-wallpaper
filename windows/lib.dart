@@ -1,55 +1,96 @@
 import 'dart:ffi' as ffi;
-import 'package:ffi/ffi.dart';
 
 main() {
-  shellExecute('open', 'http://dart.dev');
+  getWallpaper();
+  setWallpaper("D:\\Images\\Wallpapers\\sky-stars-j8e1zp.jpg");
+}
+
+class Utf16 extends ffi.Struct<Utf16> {
+  @ffi.Uint16()
+  int char;
+
+  static String fromUtf16(ffi.Pointer<Utf16> ptr) {
+    final units = List<int>();
+    var len = 0;
+    while (true) {
+      final char = ptr.elementAt(len++).load<Utf16>().char;
+      if (char == 0) break;
+      units.add(char);
+    }
+    return String.fromCharCodes(units);
+  }
+
+  static ffi.Pointer<Utf16> toUtf16(String s) {
+    final units = s.codeUnits;
+    final ptr = ffi.Pointer<Utf16>.allocate(count: units.length + 1);
+    for (var i = 0; i < units.length; i++) {
+      ptr.elementAt(i).load<Utf16>().char = units[i];
+    }
+    // Add the C string null terminator '\0'
+    ptr.elementAt(units.length).load<Utf16>().char = 0;
+    return ptr;
+  }
 }
 
 /*
-HINSTANCE ShellExecuteW(
-  HWND    hwnd,
-  LPCWSTR lpOperation,
-  LPCWSTR lpFile,
-  LPCWSTR lpParameters,
-  LPCWSTR lpDirectory,
-  INT     nShowCmd
+BOOL SystemParametersInfoW(
+  UINT  uiAction,
+  UINT  uiParam,
+  PVOID pvParam,
+  UINT  fWinIni
 );
 
-https://docs.microsoft.com/en-us/windows/win32/api/shellapi/nf-shellapi-shellexecutew
+https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow
 */
-typedef ShellExecuteC = ffi.Int32 Function(
-    ffi.Pointer hwnd,
-    ffi.Pointer lpOperation,
-    ffi.Pointer lpFile,
-    ffi.Pointer lpParameters,
-    ffi.Pointer lpDirectory,
-    ffi.Uint32 nShowCmd);
-typedef ShellExecuteDart = int Function(
-    ffi.Pointer parentWindow,
-    ffi.Pointer operation,
-    ffi.Pointer file,
-    ffi.Pointer parameters,
-    ffi.Pointer directory,
-    int showCmd);
+typedef SystemParametersInfoWC = ffi.Int8 Function(ffi.Uint32 uiAction,
+    ffi.Uint32 uiParam, ffi.Pointer pvParam, ffi.Uint32 fWinIni);
+typedef SystemParametersInfoWDart = int Function(
+    int uiAction, int uiParam, ffi.Pointer pvParam, int fWinIni);
 
-int shellExecute(String operation, String file) {
-  // Load shell32.
-  final dylib = ffi.DynamicLibrary.open('shell32.dll');
+int getWallpaper() {
+  // Load user32.dll.
+  final dylib = ffi.DynamicLibrary.open('user32.dll');
 
-  // Look up the `ShellExecuteW` function.
-  final shellExecuteP =
-      dylib.lookupFunction<ShellExecuteC, ShellExecuteDart>('ShellExecuteW');
+  // Look up the function.
+  final systemParWP =
+      dylib.lookupFunction<SystemParametersInfoWC, SystemParametersInfoWDart>(
+          'SystemParametersInfoW');
 
-  // Allocate pointers to Utf8 arrays containing the command arguments.
-  final operationP = Utf16.toUtf16(operation);
-  final fileP = Utf16.toUtf16(file);
-  const int SW_SHOWNORMAL = 1;
+  const int SPI_GETDESKWALLPAPER = 0x0073;
+  const int MAX_PATH = 1000;
+
+  // Allocate pointers to Utf16 arrays containing the command arguments.
+  final filenameP = Utf16.toUtf16("0" * MAX_PATH);
 
   // Invoke the command, and free the pointers.
-  var result = shellExecuteP(
-      ffi.nullptr, operationP, fileP, ffi.nullptr, ffi.nullptr, SW_SHOWNORMAL);
-  operationP.free();
-  fileP.free();
+  final result = systemParWP(SPI_GETDESKWALLPAPER, MAX_PATH, filenameP, 0);
+  print(Utf16.fromUtf16(filenameP));
 
+  filenameP.free();
   return result;
+}
+
+bool setWallpaper(String filename) {
+  // Load user32.dll.
+  final dylib = ffi.DynamicLibrary.open('user32.dll');
+
+  // Look up the function.
+  final systemParWP =
+      dylib.lookupFunction<SystemParametersInfoWC, SystemParametersInfoWDart>(
+          'SystemParametersInfoW');
+
+  const int SPI_SETDESKWALLPAPER = 0x0014;
+  const int SPIF_UPDATEINIFILE = 0x01;
+  const int SPIF_SENDCHANGE = 0x02;
+
+  // Allocate pointers to Utf16 arrays containing the command arguments.
+  final filenameP = Utf16.toUtf16(filename);
+
+  // Invoke the command, and free the pointers.
+  final result = systemParWP(
+      SPI_SETDESKWALLPAPER, 0, filenameP, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+  print(Utf16.fromUtf16(filenameP));
+
+  filenameP.free();
+  return result > 0;
 }
