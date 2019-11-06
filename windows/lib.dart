@@ -34,37 +34,17 @@ main(List args) async {
   print(getWallpaper());
 }
 
-const int _kMaxSmi64 = (1 << 62) - 1;
-const int _kMaxSmi32 = (1 << 30) - 1;
-final int _maxSize = sizeOf<IntPtr>() == 8 ? _kMaxSmi64 : _kMaxSmi32;
-
 /// [Utf16] Helper class to decode and encode String to Utf16 and back
 /// [ffi_examples](https://github.com/dart-lang/samples/blob/master/ffi/structs/structs.dart#L9)
 ///
 class Utf16C extends Struct {
-  @Uint16()
-  int char;
-//   static int strlen(Pointer<Utf16> string) {
-//     final Pointer<Uint16> array = string.cast<Uint16>();
-// 	// ignore: avoid_as
-//     final Uint16List nativeString = (array as Uint16Pointer).asTypedList(_maxSize);
-//     return nativeString.indexWhere((char) => char == 0);
-//   }
-
-//   static String fromUtf8(Pointer<Utf16> string) {
-//     final int length = strlen(string);
-//     return utf8.decode(Uint16List.view(
-//         string.cast<Uint16>().asTypedList(length).buffer, 0, length));
-//   }
-
+  /// [issue](https://github.com/dart-lang/ffi/issues/21#issuecomment-550336125)
   static String fromUtf16(Pointer<Utf16> ptr) {
     final units = List<int>();
     var len = 0;
     while (true) {
       final int char = ptr.cast<Int8>().elementAt(len++).value;
       final _ = ptr.cast<Int8>().elementAt(len++).value;
-      print(ptr.cast<Int8>().elementAt(len-1).address);
-      print("$char, $len");
       if (char == 0) break;
       units.add(char);
     }
