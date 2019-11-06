@@ -1,14 +1,15 @@
 // A Wallpaper cli app in dart
 // Uses dart:ffi requires dart>=2.5.0
 
-import 'dart:convert';
 import 'dart:ffi';
-import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 import 'package:path/path.dart' as p;
 import 'utils.dart' show downloadFile;
 import 'dart:io';
+
+const int SPI_GETDESKWALLPAPER = 0x0073;
+const int MAX_PATH = 1000;
 
 main(List args) async {
   if (args.length == 1) {
@@ -44,7 +45,7 @@ class Utf16C extends Struct {
     var len = 0;
     while (true) {
       final int char = ptr.cast<Int16>().elementAt(len++).value;
-      if (char == 0) break;
+      if (char == 0 || len > MAX_PATH) break;
       units.add(char);
     }
     return String.fromCharCodes(units);
@@ -76,9 +77,6 @@ String getWallpaper() {
   final systemParWP =
       dylib.lookupFunction<SystemParametersInfoWC, SystemParametersInfoWDart>(
           'SystemParametersInfoW');
-
-  const int SPI_GETDESKWALLPAPER = 0x0073;
-  const int MAX_PATH = 1000;
 
   // Allocate pointers to Utf16 arrays containing the command arguments.
   final Pointer<Utf16> filenameP = Utf16.toUtf16("0" * MAX_PATH);
