@@ -1,7 +1,9 @@
 // A Wallpaper cli app in dart
 // Uses dart:ffi requires dart>=2.5.0
 
+import 'dart:convert';
 import 'dart:ffi';
+import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 import 'package:path/path.dart' as p;
@@ -32,28 +34,42 @@ main(List args) async {
   print(getWallpaper());
 }
 
+const int _kMaxSmi64 = (1 << 62) - 1;
+const int _kMaxSmi32 = (1 << 30) - 1;
+final int _maxSize = sizeOf<IntPtr>() == 8 ? _kMaxSmi64 : _kMaxSmi32;
+
 /// [Utf16] Helper class to decode and encode String to Utf16 and back
 /// [ffi_examples](https://github.com/dart-lang/samples/blob/master/ffi/structs/structs.dart#L9)
 ///
 class Utf16C extends Struct {
   @Uint16()
   int char;
+//   static int strlen(Pointer<Utf16> string) {
+//     final Pointer<Uint16> array = string.cast<Uint16>();
+// 	// ignore: avoid_as
+//     final Uint16List nativeString = (array as Uint16Pointer).asTypedList(_maxSize);
+//     return nativeString.indexWhere((char) => char == 0);
+//   }
+
+//   static String fromUtf8(Pointer<Utf16> string) {
+//     final int length = strlen(string);
+//     return utf8.decode(Uint16List.view(
+//         string.cast<Uint16>().asTypedList(length).buffer, 0, length));
+//   }
 
   static String fromUtf16(Pointer<Utf16> ptr) {
     final units = List<int>();
     var len = 0;
     while (true) {
-      // bug?
-      final int char = (ptr.elementAt(len++) as Pointer).cast<Int8>().value;
-      print(ptr.elementAt(len).address);
+      final int char = ptr.cast<Int8>().elementAt(len++).value;
+      print(ptr.cast<Int8>().elementAt(len).address);
       print("$char, $len");
-      if (char == 0 || len > 200) break;
+      if (char == 0) break;
       units.add(char);
     }
     return String.fromCharCodes(units);
   }
 }
-
 /*
 BOOL SystemParametersInfoW(
   UINT  uiAction,
