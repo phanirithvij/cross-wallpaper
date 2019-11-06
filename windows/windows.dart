@@ -43,8 +43,7 @@ class Utf16C extends Struct {
     final units = List<int>();
     var len = 0;
     while (true) {
-      final int char = ptr.cast<Int8>().elementAt(len++).value;
-      final _ = ptr.cast<Int8>().elementAt(len++).value;
+      final int char = ptr.cast<Int16>().elementAt(len++).value;
       if (char == 0) break;
       units.add(char);
     }
