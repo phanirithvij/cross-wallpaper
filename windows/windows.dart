@@ -8,7 +8,6 @@ import 'package:path/path.dart' as p;
 import 'utils.dart' show downloadFile;
 import 'dart:io';
 
-const int SPI_GETDESKWALLPAPER = 0x0073;
 const int MAX_PATH = 1000;
 
 main(List args) async {
@@ -51,6 +50,7 @@ class Utf16C extends Struct {
     return String.fromCharCodes(units);
   }
 }
+
 /*
 BOOL SystemParametersInfoW(
   UINT  uiAction,
@@ -81,6 +81,7 @@ String getWallpaper() {
   // Allocate pointers to Utf16 arrays containing the command arguments.
   final Pointer<Utf16> filenameP = Utf16.toUtf16("0" * MAX_PATH);
 
+  const int SPI_GETDESKWALLPAPER = 0x0073;
   // Invoke the command, and free the pointers.
   systemParWP(SPI_GETDESKWALLPAPER, MAX_PATH, filenameP, 0);
   String wall = Utf16C.fromUtf16(filenameP);
