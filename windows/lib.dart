@@ -62,7 +62,8 @@ class Utf16C extends Struct {
     var len = 0;
     while (true) {
       final int char = ptr.cast<Int8>().elementAt(len++).value;
-      print(ptr.cast<Int8>().elementAt(len).address);
+      final _ = ptr.cast<Int8>().elementAt(len++).value;
+      print(ptr.cast<Int8>().elementAt(len-1).address);
       print("$char, $len");
       if (char == 0) break;
       units.add(char);
