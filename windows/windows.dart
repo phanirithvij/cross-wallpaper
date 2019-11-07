@@ -37,13 +37,14 @@ main(List args) async {
 /// [Utf16] Helper class to decode and encode String to Utf16 and back
 /// [ffi_examples](https://github.com/dart-lang/samples/blob/master/ffi/structs/structs.dart#L9)
 ///
-class Utf16C extends Struct {
-  /// [issue](https://github.com/dart-lang/ffi/issues/21#issuecomment-550336125)
-  static String fromUtf16(Pointer<Utf16> ptr) {
+extension Utf16String on Pointer<Utf16> {
+  /// Get a [String] from a [Pointer<Utf16>] object
+  /// [details](https://github.com/dart-lang/ffi/issues/21#issuecomment-550336125)
+  String fromUtf16() {
     final units = List<int>();
     var len = 0;
     while (true) {
-      final int char = ptr.cast<Int16>().elementAt(len++).value;
+      final int char = this.cast<Int16>().elementAt(len++).value;
       if (char == 0 || len > MAX_PATH) break;
       units.add(char);
     }
@@ -84,7 +85,7 @@ String getWallpaper() {
   const int SPI_GETDESKWALLPAPER = 0x0073;
   // Invoke the command, and free the pointers.
   systemParWP(SPI_GETDESKWALLPAPER, MAX_PATH, filenameP, 0);
-  String wall = Utf16C.fromUtf16(filenameP);
+  String wall = filenameP.fromUtf16();
   free(filenameP);
 
   return wall;
